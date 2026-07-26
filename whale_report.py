@@ -1,4 +1,6 @@
+
 from whale_database import get_recent_whales
+from whale_sentiment import analyze_sentiment
 
 
 def generate_report():
@@ -16,34 +18,49 @@ def generate_report():
 
     buy = 0
     sell = 0
+
     tokens = {}
 
 
     for w in whales:
 
-        value = w["usd_value"]
+        value = float(w.get("usd_value", 0))
 
-        tokens[w["token"]] = (
-            tokens.get(w["token"], 0) + value
+        token = w.get(
+            "token",
+            "UNKNOWN"
+        )
+
+        tokens[token] = (
+            tokens.get(token, 0) + value
         )
 
 
-        if "BUY" in w["direction"]:
+        direction = w.get(
+            "direction",
+            ""
+        ).upper()
+
+
+        if "BUY" in direction or "ПОКУП" in direction:
             buy += value
 
-        elif "SELL" in w["direction"]:
+
+        elif "SELL" in direction or "ПРОДА" in direction:
             sell += value
 
 
-    top = sorted(
-        tokens.items(),
-        key=lambda x: x[1],
-        reverse=True
-    )[:5]
+
+    sentiment = analyze_sentiment(
+        buy,
+        sell
+    )
 
 
     text = (
         "🐋 Whale Report 24h\n\n"
+        f"{sentiment['signal']}\n"
+        f"Сила сигнала: {sentiment['strength']}%\n\n"
         f"📊 Всего переводов: {total}\n\n"
         f"🟢 Покупки: ${buy:,.0f}\n"
         f"🔴 Продажи: ${sell:,.0f}\n\n"
@@ -51,7 +68,14 @@ def generate_report():
     )
 
 
-    for token, value in top:
+    top_tokens = sorted(
+        tokens.items(),
+        key=lambda x: x[1],
+        reverse=True
+    )[:5]
+
+
+    for token, value in top_tokens:
 
         text += (
             f"{token}: ${value:,.0f}\n"
