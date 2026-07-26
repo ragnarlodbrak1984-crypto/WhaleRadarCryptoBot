@@ -1,5 +1,4 @@
-
-tfrom whale_database import get_recent_whales
+from whale_database import get_recent_whales
 from whale_sentiment import analyze_sentiment
 from whale_score import calculate_score
 
@@ -32,15 +31,10 @@ def generate_report():
 
         token = w.get("token", "UNKNOWN")
 
-        tokens[token] = (
-            tokens.get(token, 0) + value
-        )
+        tokens[token] = tokens.get(token, 0) + value
 
 
-        direction = w.get(
-            "direction",
-            ""
-        ).upper()
+        direction = w.get("direction", "").upper()
 
 
         if "BUY" in direction or "ПОКУП" in direction:
@@ -48,7 +42,6 @@ def generate_report():
 
         elif "SELL" in direction or "ПРОДА" in direction:
             sell += value
-
 
 
     sentiment = analyze_sentiment(
@@ -84,9 +77,7 @@ def generate_report():
         reverse=True
     )[:5]:
 
-        text += (
-            f"{token}: ${value:,.0f}\n"
-        )
+        text += f"{token}: ${value:,.0f}\n"
 
 
     return text
