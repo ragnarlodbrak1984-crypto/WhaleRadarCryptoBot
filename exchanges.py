@@ -1,0 +1,10 @@
+EXCHANGES = {
+    "Binance": [
+        "0x28C6c06298d514Db089934071355E5743bf21d60",
+        "0x21a31Ee1afC51d94C2eFcAABC89E9C4A4952eA"
+    ],
+
+    "OKX": [
+        "0x236F9F97e0E62388479bf9E5BA4889e46B0273C3"
+    ]
+}
