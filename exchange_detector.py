@@ -1,18 +1,19 @@
-# Известные адреса бирж
-# Потом будем расширять список
+# Известные адреса бирж Ethereum
+# Список можно расширять
 
 EXCHANGE_WALLETS = {
 
-    "binance": [
-        "0x0000000000000000000000000000000000000000"
+    "Binance": [
+        "0x28C6c06298d514Db089934071355E5743bf21d60",
+        "0x21a31Ee1afC51d94C2eFcCAa2092aD7D7F4fE9A"
     ],
 
-    "okx": [
-        "0x0000000000000000000000000000000000000000"
+    "OKX": [
+        "0x236F9F97e0E62388479f5AEc5B8A0D5cA7B6F5C5"
     ],
 
-    "coinbase": [
-        "0x0000000000000000000000000000000000000000"
+    "Coinbase": [
+        "0x503828976D22510aad0201ac7EC88293211D23Da"
     ]
 }
 
@@ -20,14 +21,18 @@ EXCHANGE_WALLETS = {
 
 def is_exchange(address):
 
+    if not address:
+        return None
+
     address = address.lower()
 
 
     for exchange, wallets in EXCHANGE_WALLETS.items():
 
-        if address in wallets:
+        for wallet in wallets:
 
-            return exchange
+            if address == wallet.lower():
+                return exchange
 
 
     return None
@@ -41,26 +46,28 @@ def detect_flow(from_address, to_address):
     receiver = is_exchange(to_address)
 
 
+    # Биржа отправила наружу
     if sender and not receiver:
 
         return {
             "flow": "OUT",
             "exchange": sender,
-            "meaning": "🟢 Вывод с биржи (накопление)"
+            "meaning": "🟢 Вывод с биржи — возможное накопление"
         }
 
 
+    # Кошелёк отправил на биржу
     if receiver and not sender:
 
         return {
             "flow": "IN",
             "exchange": receiver,
-            "meaning": "🔴 Ввод на биржу (риск продажи)"
+            "meaning": "🔴 Ввод на биржу — возможное давление продажи"
         }
 
 
     return {
         "flow": "UNKNOWN",
         "exchange": None,
-        "meaning": "⚪ Неизвестное направление"
+        "meaning": "⚪ Личный кошелёк / неизвестное направление"
     }
