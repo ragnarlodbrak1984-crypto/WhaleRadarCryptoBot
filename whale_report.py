@@ -1,124 +1,61 @@
-import json
-import os
-from datetime import datetime, timedelta
-
-
-FILE = "whale_history.json"
-
-
-def load_history():
-
-    if not os.path.exists(FILE):
-        return []
-
-    with open(FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
-
+from whale_database import get_recent_whales
 
 
 def generate_report():
 
-    history = load_history()
+    whales = get_recent_whales(24)
 
-    if not history:
-        return "🐋 WHALE REPORT\n\nНет данных за период"
-
-
-
-    limit_time = datetime.now() - timedelta(hours=24)
-
-    recent = []
-
-
-    for item in history:
-
-        try:
-            tx_time = datetime.strptime(
-                item["time"],
-                "%Y-%m-%d %H:%M:%S"
-            )
-
-            if tx_time >= limit_time:
-                recent.append(item)
-
-        except:
-            continue
-
-
-
-    if not recent:
+    if not whales:
         return (
-            "🐋 WHALE REPORT (24h)\n\n"
-            "Крупных движений не обнаружено"
+            "🐋 Whale Report 24h\n\n"
+            "Пока крупных движений не найдено."
         )
 
 
+    total = len(whales)
 
-    total_value = 0
-    buys = 0
-    sells = 0
-
-
+    buy = 0
+    sell = 0
     tokens = {}
 
 
-    for item in recent:
+    for w in whales:
 
-        value = item.get(
-            "value",
-            0
-        )
+        value = w["usd_value"]
 
-        total_value += value
-
-
-        direction = item.get(
-            "direction",
-            ""
+        tokens[w["token"]] = (
+            tokens.get(w["token"], 0) + value
         )
 
 
-        if "накопление" in direction:
-            buys += value
+        if "BUY" in w["direction"]:
+            buy += value
+
+        elif "SELL" in w["direction"]:
+            sell += value
 
 
-        if "продажа" in direction:
-            sells += value
-
-
-
-        token = item.get(
-            "token",
-            "UNKNOWN"
-        )
-
-
-        tokens[token] = (
-            tokens.get(token, 0)
-            + value
-        )
-
-
-
-    report = (
-        "🐋 WHALE REPORT (24h)\n\n"
-        f"📊 Операций: {len(recent)}\n"
-        f"💰 Общий объём: ${total_value:,.0f}\n\n"
-        f"🟢 Накопление: ${buys:,.0f}\n"
-        f"🔴 Продажи: ${sells:,.0f}\n\n"
-        "🪙 Топ токены:\n"
-    )
-
-
-    for token, value in sorted(
+    top = sorted(
         tokens.items(),
         key=lambda x: x[1],
         reverse=True
-    )[:5]:
+    )[:5]
 
-        report += (
+
+    text = (
+        "🐋 Whale Report 24h\n\n"
+        f"📊 Всего переводов: {total}\n\n"
+        f"🟢 Покупки: ${buy:,.0f}\n"
+        f"🔴 Продажи: ${sell:,.0f}\n\n"
+        "🔥 Топ токены:\n"
+    )
+
+
+    for token, value in top:
+
+        text += (
             f"{token}: ${value:,.0f}\n"
         )
 
 
-    return report
+    return text
