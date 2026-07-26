@@ -1,158 +1,100 @@
-import asyncio
-import requests
-
-from telegram import Bot
-
-from config import BOT_TOKEN, CHAT_ID, ETHERSCAN_API_KEY
-from tokens import TOKENS
-from prices import get_price
-from exchange_detector import detect_flow
-from whale_analysis import get_whale_level
+from whale_database import get_recent_whales
+from whale_sentiment import analyze_sentiment
+from whale_score import calculate_score
 
 
-async def send_alert(text):
+def generate_report():
 
-    bot = Bot(BOT_TOKEN)
-
-    await bot.send_message(
-        chat_id=CHAT_ID,
-        text=text
-    )
+    whales = get_recent_whales(24)
 
 
+    if not whales:
 
-def check_token_transfers(token_name, contract):
-
-    url = "https://api.etherscan.io/api"
-
-    params = {
-        "module": "account",
-        "action": "tokentx",
-        "contractaddress": contract,
-        "page": 1,
-        "offset": 10,
-        "sort": "desc",
-        "apikey": ETHERSCAN_API_KEY
-    }
+        return (
+            "🐋 Whale Report 24h\n\n"
+            "Крупных движений не найдено."
+        )
 
 
-    response = requests.get(
-        url,
-        params=params
-    )
+    total_value = 0
+    buy = 0
+    sell = 0
 
-    data = response.json()
-
-
-    if data.get("status") != "1":
-        return []
+    tokens = {}
 
 
-    if not isinstance(
-        data.get("result"),
-        list
-    ):
-        return []
+    for whale in whales:
 
-
-    return data["result"]
-
-
-
-async def monitor():
-
-    checked = set()
-
-
-    await send_alert(
-        "🐋 Whale Detector запущен\n"
-        "✅ Анализ китов активен"
-    )
-
-
-    while True:
-
-        for name, data in TOKENS.items():
-
-
-            transfers = check_token_transfers(
-                name,
-                data["address"]
+        value = float(
+            whale.get(
+                "usd_value",
+                0
             )
+        )
+
+        total_value += value
 
 
-            for tx in transfers:
+        token = whale.get(
+            "token",
+            "UNKNOWN"
+        )
 
 
-                tx_hash = tx["hash"]
+        tokens[token] = (
+            tokens.get(token, 0)
+            + value
+        )
 
 
-                if tx_hash in checked:
-                    continue
+        direction = whale.get(
+            "direction",
+            ""
+        ).upper()
 
 
-                checked.add(tx_hash)
+        if "BUY" in direction:
+            buy += value
 
-
-                amount = int(
-                    tx["value"]
-                ) / (
-                    10 ** int(
-                        tx["tokenDecimal"]
-                    )
-                )
-
-
-                price = get_price(name)
-
-                usd_value = amount * price
-
-
-                minimum = data.get(
-                    "min_amount",
-                    500000
-                )
-
-
-                if amount < minimum:
-                    continue
-
-
-                from_address = tx["from"].lower()
-
-                to_address = tx["to"].lower()
-
-
-                flow = detect_flow(
-                    from_address,
-                    to_address
-                )
-
-
-                level = get_whale_level(
-                    usd_value
-                )
-
-
-                await send_alert(
-
-                    f"🐋 WHALE ALERT\n\n"
-                    f"🪙 Token: {name}\n"
-                    f"💰 Value: ${usd_value:,.0f}\n\n"
-                    f"⭐ Level:\n{level}\n\n"
-                    f"{flow['meaning']}\n"
-                    f"🏦 Exchange: {flow['exchange']}\n\n"
-                    f"🔗 TX:\n{tx_hash}"
-
-                )
-
-
-        await asyncio.sleep(60)
+        elif "SELL" in direction:
+            sell += value
 
 
 
-if __name__ == "__main__":
+    sentiment = analyze_sentiment(
+        buy,
+        sell
+    )
 
-    print("Запуск Whale Detector...")
 
-    asyncio.run(monitor())
+    score = calculate_score(
+        buy,
+        sell,
+        "OUT",
+        total_value
+    )
+
+
+    report = (
+        "🐋 WHALE REPORT 24H\n\n"
+        f"{sentiment}\n\n"
+        f"⭐ Whale Score: {score}/100\n\n"
+        f"💰 Volume: ${total_value:,.0f}\n"
+        f"🟢 Buy: ${buy:,.0f}\n"
+        f"🔴 Sell: ${sell:,.0f}\n\n"
+        "🔥 Top tokens:\n"
+    )
+
+
+    for token, value in sorted(
+        tokens.items(),
+        key=lambda x: x[1],
+        reverse=True
+    )[:5]:
+
+        report += (
+            f"{token}: ${value:,.0f}\n"
+        )
+
+
+    return report
