@@ -3,6 +3,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 
 from config import BOT_TOKEN
 from whale_report import generate_report
+from whale_ranking import get_whale_ranking
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -11,7 +12,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "✅ WhaleRadarCrypto2026Bot запущен!\n"
         "🐋 Система работает.\n\n"
         "Команды:\n"
-        "/report - отчёт китов за 24 часа\n"
+        "/report - отчёт китов 24 часа\n"
+        "/ranking - рейтинг активности китов\n"
         "/id - показать CHAT_ID"
     )
 
@@ -32,6 +34,15 @@ async def report(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def ranking(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    text = get_whale_ranking()
+
+    await update.message.reply_text(
+        text
+    )
+
+
 def main():
 
     app = Application.builder().token(BOT_TOKEN).build()
@@ -39,6 +50,7 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("id", myid))
     app.add_handler(CommandHandler("report", report))
+    app.add_handler(CommandHandler("ranking", ranking))
 
     print("Бот запущен...")
 
